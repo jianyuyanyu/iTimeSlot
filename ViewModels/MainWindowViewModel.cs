@@ -33,13 +33,13 @@ namespace iTimeSlot.ViewModels;
 public partial class MainWindowViewModel : ObservableViewModelBase
 {
 
-    private static readonly int[] StatRangeOptions = { 3, 7, 30, 365 };
     private const int StatDayWidth = 72;
     private const int StatMinChartWidth = 300;
 
     public MainWindowViewModel()
     {
         _trayHelper = new TrayHelper();
+        _selectedStatRange = StatRangeOptions[1];
 
         //init latest data
         RefreshStatCmd();
@@ -237,14 +237,26 @@ public partial class MainWindowViewModel : ObservableViewModelBase
         }
     }
 
-    private int _statRangeIndex;
-    public int StatRangeIndex
+    public ObservableCollection<StatRangeOption> StatRangeOptions { get; } = new()
     {
-        get => _statRangeIndex;
+        new StatRangeOption("5d", 5),
+        new StatRangeOption("7d", 7),
+        new StatRangeOption("30d", 30),
+        new StatRangeOption("1y", 365)
+    };
+
+    private StatRangeOption? _selectedStatRange;
+    public StatRangeOption? SelectedStatRange
+    {
+        get => _selectedStatRange;
         set
         {
-            var normalized = value >= 0 && value < StatRangeOptions.Length ? value : 0;
-            if (this.SetProperty(ref _statRangeIndex, normalized))
+            if (value == null)
+            {
+                return;
+            }
+
+            if (this.SetProperty(ref _selectedStatRange, value))
             {
                 RefreshStatCmd();
             }
@@ -449,7 +461,7 @@ public partial class MainWindowViewModel : ObservableViewModelBase
         var allStored = Global.StatReporter.ReadWeekData(int.MaxValue);
         var storedByDate = allStored.ToDictionary(s => s.Date, s => s);
 
-        var displayDays = StatRangeOptions[StatRangeIndex];
+        var displayDays = SelectedStatRange?.Days ?? StatRangeOptions[0].Days;
 
         // Generate selected range: oldest selected day through today.
         const string dateFormat = "yyyy-MM-dd";
@@ -480,8 +492,9 @@ public partial class MainWindowViewModel : ObservableViewModelBase
             }
         };
 
+        var dateLabelFormat = "dd MMM";
         var dates = fullRange
-            .Select(x => DateTime.TryParse(x.Date, out var parsedDate) ? parsedDate.ToString("dd MMM yy") : "Invalid Date")
+            .Select(x => DateTime.TryParse(x.Date, out var parsedDate) ? parsedDate.ToString(dateLabelFormat) : "Invalid Date")
             .ToArray();
 
         StatXAxes = new Axis[]
@@ -608,3 +621,21 @@ public partial class MainWindowViewModel : ObservableViewModelBase
 }
 
 public class ObservableViewModelBase : ObservableObject;
+
+public class StatRangeOption
+{
+    public StatRangeOption(string label, int days)
+    {
+        Label = label;
+        Days = days;
+    }
+
+    public string Label { get; }
+
+    public int Days { get; }
+
+    public override string ToString()
+    {
+        return Label;
+    }
+}

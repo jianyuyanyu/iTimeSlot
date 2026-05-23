@@ -17,23 +17,11 @@
     <Grid RowDefinitions="Auto,*">
         <DockPanel Grid.Row="0"
                    Margin="4">
-            <StackPanel Orientation="Horizontal">
-                <Button x:Name="StatRange3Btn"
-                        Margin="0 0 4 0"
-                        Padding="8 4"
-                        Click="StatRange3_Click">3d</Button>
-                <Button x:Name="StatRange7Btn"
-                        Margin="0 0 4 0"
-                        Padding="8 4"
-                        Click="StatRange7_Click">7d</Button>
-                <Button x:Name="StatRange30Btn"
-                        Margin="0 0 4 0"
-                        Padding="8 4"
-                        Click="StatRange30_Click">30d</Button>
-                <Button x:Name="StatRange365Btn"
-                        Padding="8 4"
-                        Click="StatRange365_Click">1y</Button>
-            </StackPanel>
+            <ComboBox ItemsSource="{Binding StatRangeOptions}"
+                      SelectedItem="{Binding SelectedStatRange}"
+                      Width="88"
+                      HorizontalAlignment="Left"
+                      DockPanel.Dock="Left" />
 
             <Button Name="RefreshStatBtn"
                     HorizontalAlignment="Right"
