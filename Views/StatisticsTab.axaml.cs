@@ -14,12 +14,10 @@ public partial class StatisticsTab : UserControl
         DataContextChanged += (_, _) =>
         {
             RegisterScrollCallback();
-            ScrollStatToEnd();
         };
         Loaded += (_, _) =>
         {
             RegisterScrollCallback();
-            ScrollStatToEnd();
         };
     }
 

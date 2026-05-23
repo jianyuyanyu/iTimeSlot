@@ -33,7 +33,7 @@ namespace iTimeSlot.ViewModels;
 public partial class MainWindowViewModel : ObservableViewModelBase
 {
 
-    private const int StatDayWidth = 72;
+    private const int StatDayWidth = 48;
     private const int StatMinChartWidth = 300;
 
     public MainWindowViewModel()
@@ -518,8 +518,9 @@ public partial class MainWindowViewModel : ObservableViewModelBase
 
         StatChartWidth = Math.Max(StatMinChartWidth, dates.Length * StatDayWidth);
 
-        // Notify view to scroll to the end (most recent days)
-        ScrollStatToEnd?.Invoke();
+        // Only scroll to end for longer ranges where the chart overflows
+        if (displayDays > 7)
+            ScrollStatToEnd?.Invoke();
     }
 
     private static double GetRoundedMinuteAxisMax(IEnumerable<DailyStat> stats)

@@ -41,12 +41,11 @@
                       x:Name="StatScrollViewer"
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Disabled">
-            <Panel Width="{Binding StatChartWidth}">
-                <lvc:CartesianChart Series="{Binding StatSeries}"
-                                    XAxes="{Binding StatXAxes}"
-                                    YAxes="{Binding StatYAxes}"
-                                    LegendPosition="Bottom" />
-            </Panel>
+            <lvc:CartesianChart Series="{Binding StatSeries}"
+                                XAxes="{Binding StatXAxes}"
+                                YAxes="{Binding StatYAxes}"
+                                MinWidth="{Binding StatChartWidth}"
+                                LegendPosition="Bottom" />
         </ScrollViewer>
     </Grid>
 </UserControl>
