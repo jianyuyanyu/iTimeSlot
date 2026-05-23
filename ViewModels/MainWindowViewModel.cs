@@ -33,7 +33,9 @@ namespace iTimeSlot.ViewModels;
 public partial class MainWindowViewModel : ObservableViewModelBase
 {
 
-    private const int DisplayNum = 3;
+    private static readonly int[] StatRangeOptions = { 3, 7, 30, 365 };
+    private const int StatDayWidth = 72;
+    private const int StatMinChartWidth = 300;
 
     public MainWindowViewModel()
     {
@@ -222,6 +224,45 @@ public partial class MainWindowViewModel : ObservableViewModelBase
         }
     }
 
+    private Axis[] _statYAxes = Array.Empty<Axis>();
+    public Axis[] StatYAxes
+    {
+        get
+        {
+            return _statYAxes;
+        }
+        set
+        {
+            this.SetProperty(ref _statYAxes, value);
+        }
+    }
+
+    private int _statRangeIndex;
+    public int StatRangeIndex
+    {
+        get => _statRangeIndex;
+        set
+        {
+            var normalized = value >= 0 && value < StatRangeOptions.Length ? value : 0;
+            if (this.SetProperty(ref _statRangeIndex, normalized))
+            {
+                RefreshStatCmd();
+            }
+        }
+    }
+
+    private double _statChartWidth = StatMinChartWidth;
+    public double StatChartWidth
+    {
+        get => _statChartWidth;
+        set => this.SetProperty(ref _statChartWidth, value);
+    }
+
+    /// <summary>
+    /// Set by the View to enable auto-scrolling the chart to the end (most recent days).
+    /// </summary>
+    public Action? ScrollStatToEnd { get; set; }
+
 
     public void DeleteTimeSpan(TimeSlot toDel)
     {
@@ -404,26 +445,43 @@ public partial class MainWindowViewModel : ObservableViewModelBase
         TotalBreakMinutes = data.TotalBreakMinutes;
         CompletedWorkCount = data.WorkCount;
 
-        var weekDataSubset = Global.StatReporter.ReadWeekData(DisplayNum).ToArray();
+        // Read all stored daily stats and build a lookup by date
+        var allStored = Global.StatReporter.ReadWeekData(int.MaxValue);
+        var storedByDate = allStored.ToDictionary(s => s.Date, s => s);
+
+        var displayDays = StatRangeOptions[StatRangeIndex];
+
+        // Generate selected range: oldest selected day through today.
+        const string dateFormat = "yyyy-MM-dd";
+        var today = DateTime.Today;
+        var fullRange = new DailyStat[displayDays];
+        for (int i = 0; i < displayDays; i++)
+        {
+            var day = today.AddDays(-(displayDays - 1 - i));
+            var dateKey = day.ToString(dateFormat);
+            fullRange[i] = storedByDate.TryGetValue(dateKey, out var existing)
+                ? existing
+                : new DailyStat { Date = dateKey };
+        }
 
         StatSeries = new ISeries[]
         {
             new ColumnSeries<int>
             {
                 Name = "Total work minutes",
-                Values = weekDataSubset.Select(x => x.TotalWorkMinutes).ToArray(),
+                Values = fullRange.Select(x => x.TotalWorkMinutes).ToArray(),
                 Fill = new SolidColorPaint(new SKColor(139, 195, 74))
             },
             new ColumnSeries<int>
             {
                 Name = "Total break minutes",
-                Values = weekDataSubset.Select(x => x.TotalBreakMinutes).ToArray(),
+                Values = fullRange.Select(x => x.TotalBreakMinutes).ToArray(),
                 Fill = new SolidColorPaint(new SKColor(0, 188, 212))
             }
         };
 
-        var dates = weekDataSubset
-            .Select(x => DateTime.TryParse(x.Date, out var parsedDate) ? parsedDate.ToString("dd MMM") : "Invalid Date")
+        var dates = fullRange
+            .Select(x => DateTime.TryParse(x.Date, out var parsedDate) ? parsedDate.ToString("dd MMM yy") : "Invalid Date")
             .ToArray();
 
         StatXAxes = new Axis[]
@@ -433,6 +491,38 @@ public partial class MainWindowViewModel : ObservableViewModelBase
                 Labels = dates
             }
         };
+
+        StatYAxes = new Axis[]
+        {
+            new Axis
+            {
+                MinLimit = 0,
+                MaxLimit = GetRoundedMinuteAxisMax(fullRange),
+                MinStep = 30,
+                Labeler = value => $"{value:0}m"
+            }
+        };
+
+        StatChartWidth = Math.Max(StatMinChartWidth, dates.Length * StatDayWidth);
+
+        // Notify view to scroll to the end (most recent days)
+        ScrollStatToEnd?.Invoke();
+    }
+
+    private static double GetRoundedMinuteAxisMax(IEnumerable<DailyStat> stats)
+    {
+        var maxMinutes = stats
+            .Select(s => Math.Max(s.TotalWorkMinutes, s.TotalBreakMinutes))
+            .DefaultIfEmpty(0)
+            .Max();
+
+        if (maxMinutes <= 0)
+        {
+            return 60;
+        }
+
+        var step = maxMinutes <= 120 ? 30 : 60;
+        return Math.Ceiling(maxMinutes / (double)step) * step;
     }
 
     private void ProgressUpdateAction(double leftPercent100)
