@@ -239,7 +239,7 @@ public partial class MainWindowViewModel : ObservableViewModelBase
 
     public ObservableCollection<StatRangeOption> StatRangeOptions { get; } = new()
     {
-        new StatRangeOption("5d", 5),
+        new StatRangeOption("3d", 3),
         new StatRangeOption("7d", 7),
         new StatRangeOption("30d", 30),
         new StatRangeOption("1y", 365)
